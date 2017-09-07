@@ -458,7 +458,7 @@
 				remote-endpoint = <&isp_mipi_in>;
 				data-lanes = <1 2>;
 				link-frequencies =
-					/bits/ 64 <150000000>;		
+					/bits/ 64 <150000000>;
 			};
 		};
 	};
@@ -738,10 +738,9 @@
 	port {
 		isp_mipi_in: endpoint {
 			remote-endpoint = <&camera_out>;
-			/* actually it should be removed */
-			data-lanes = <1 2>;
-			link-frequencies =
-				/bits/ 64 <150000000>;	
+				data-lanes = <1 2>;
+				link-frequencies =
+					/bits/ 64 <150000000>;
 		};
 	};
 };

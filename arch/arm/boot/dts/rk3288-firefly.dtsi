@@ -857,12 +857,6 @@
 	port {
 		isp_mipi_in: endpoint {
 			remote-endpoint = <&camera_out>;
-			/* actually it should be removed */
-			clock-lanes = <0>;
-			data-lanes = <1 2 3 4>;
-			clock-noncontinuous;
-			link-frequencies =
-				/bits/ 64 <297000000>;
 		};
 	};
 };
