@@ -210,13 +210,12 @@ static int rkisp1_config_isp(struct rkisp1_device *dev)
 
 		irq_mask |= CIF_ISP_DATA_LOSS;
 
-		if (in_fmt->yc_swap) {
+		if (in_fmt->yc_swap)
 			yuv_seq = CIF_ISP_ACQ_PROP_CBYCRY;
-		} else if (in_fmt->uv_swap) {
+		else if (in_fmt->uv_swap)
 			yuv_seq = CIF_ISP_ACQ_PROP_YCRYCB;
-		} else {
+		else
 			yuv_seq = CIF_ISP_ACQ_PROP_YCBYCR;
-		}
 	}
 
 	/* Set up input acquisition properties */
@@ -298,8 +297,8 @@ static int rkisp1_config_mipi(struct rkisp1_device *dev)
 	writel(mipi_ctrl, dev->base_addr + CIF_MIPI_CTRL);
 
 	/* TODO: shutdown lanes
-	writel(mipi_ctrl | CIF_MIPI_CTRL_SHUTDOWNLANES(0xf),
-		      dev->base_addr + CIF_MIPI_CTRL);
+	*writel(mipi_ctrl | CIF_MIPI_CTRL_SHUTDOWNLANES(0xf),
+	*	      dev->base_addr + CIF_MIPI_CTRL);
 	*/
 
 	/* Configure Data Type and Virtual Channel */
@@ -355,7 +354,7 @@ static int rkisp1_config_mipi(struct rkisp1_device *dev)
 		  CIF_MIPI_ADD_DATA_OVFLW,
 		  dev->base_addr + CIF_MIPI_IMSC);
 
-	v4l2_dbg(1, debug, &dev->v4l2_dev, "\n  MIPI_CTRL 0x%08x\n"
+	v4l2_dbg(1, rkisp1_debug, &dev->v4l2_dev, "\n  MIPI_CTRL 0x%08x\n"
 		 "  MIPI_IMG_DATA_SEL 0x%08x\n"
 		 "  MIPI_STATUS 0x%08x\n"
 		 "  MIPI_IMSC 0x%08x\n",
@@ -391,8 +390,8 @@ static void rkisp1_config_clk(struct rkisp1_device *dev)
 	/* TODO: remove CIF_CCL_CIF_CLK_ENA, this is default */
 	/*writel(CIF_CCL_CIF_CLK_ENA, dev->base_addr + CIF_CCL);*/
 	u32 val = CIF_ICCL_ISP_CLK | CIF_ICCL_CP_CLK | CIF_ICCL_MRSZ_CLK |
-			CIF_ICCL_SRSZ_CLK | CIF_ICCL_JPEG_CLK | CIF_ICCL_MI_CLK |
-			CIF_ICCL_MIPI_CLK;
+		CIF_ICCL_SRSZ_CLK | CIF_ICCL_JPEG_CLK | CIF_ICCL_MI_CLK |
+		CIF_ICCL_MIPI_CLK;
 
 	writel(val, dev->base_addr + CIF_ICCL);
 }
@@ -402,13 +401,13 @@ static int rkisp1_config_cif(struct rkisp1_device *dev)
 	int ret = 0;
 	u32 cif_id;
 
-	v4l2_dbg(1, debug, &dev->v4l2_dev,
+	v4l2_dbg(1, rkisp1_debug, &dev->v4l2_dev,
 		 "SP state = %d, MP state = %d\n",
 		 dev->stream[RKISP1_STREAM_SP].state,
 		 dev->stream[RKISP1_STREAM_MP].state);
 
 	cif_id = readl(dev->base_addr + CIF_VI_ID);
-	v4l2_dbg(1, debug, &dev->v4l2_dev, "CIF_ID 0x%08x\n", cif_id);
+	v4l2_dbg(1, rkisp1_debug, &dev->v4l2_dev, "CIF_ID 0x%08x\n", cif_id);
 
 	dev->out_of_buffer_stall = RKISP1_ALWAYS_STALL_ON_NO_BUFS;
 	/*
@@ -440,7 +439,7 @@ static int cif_isp10_stop(struct rkisp1_device *dev)
 	void __iomem *base = dev->base_addr;
 	void *addr;
 
-	v4l2_dbg(1, debug, &dev->v4l2_dev,
+	v4l2_dbg(1, rkisp1_debug, &dev->v4l2_dev,
 		 "SP state = %d, MP state = %d\n",
 		 dev->stream[RKISP1_STREAM_SP].state,
 		 dev->stream[RKISP1_STREAM_MP].state);
@@ -474,9 +473,8 @@ static int cif_isp10_stop(struct rkisp1_device *dev)
 
 	readx_poll_timeout(readl, base + CIF_ISP_RIS,
 			   val, val & CIF_ISP_OFF, 20, 100);
-	v4l2_dbg(1, debug, &dev->v4l2_dev,
-		 "SP state %d, MP state %d MI_CTRL 0x%08x \
-		 ISP_CTRL 0x%08x MIPI_CTRL 0x%08x\n",
+	v4l2_dbg(1, rkisp1_debug, &dev->v4l2_dev,
+		"state(MP:%d, SP:%d), MI_CTRL:%x, ISP_CTRL:%x, MIPI_CTRL:%x\n",
 		 dev->stream[RKISP1_STREAM_SP].state,
 		 dev->stream[RKISP1_STREAM_MP].state,
 		 readl(base + CIF_MI_CTRL),
@@ -493,7 +491,7 @@ static int cif_isp10_start(struct rkisp1_device *dev)
 	void *addr;
 	u32 val;
 
-	v4l2_dbg(1, debug, &dev->v4l2_dev,
+	v4l2_dbg(1, rkisp1_debug, &dev->v4l2_dev,
 		 "SP state = %d, MP state = %d, isp start cnt = %d\n",
 		 dev->stream[RKISP1_STREAM_SP].state,
 		 dev->stream[RKISP1_STREAM_MP].state, dev->cif_streamon_cnt);
@@ -525,7 +523,7 @@ static int cif_isp10_start(struct rkisp1_device *dev)
 	/* TODO: maybe moved to isp_stats.c*/
 	dev->stats_vdev.frame_id = 0;
 
-	v4l2_dbg(1, debug, &dev->v4l2_dev,
+	v4l2_dbg(1, rkisp1_debug, &dev->v4l2_dev,
 		 "SP state = %d, MP state = %d MI_CTRL 0x%08x\n"
 		 "  ISP_CTRL 0x%08x MIPI_CTRL 0x%08x\n",
 		 dev->stream[RKISP1_STREAM_SP].state,
@@ -1002,13 +1000,13 @@ static int rkisp1_isp_sd_get_selection(struct v4l2_subdev *sd,
 
 	switch (sel->target) {
 	case V4L2_SEL_TGT_CROP_BOUNDS:
-		if(sel->pad == RKISP1_ISP_PAD_SINK)
+		if (sel->pad == RKISP1_ISP_PAD_SINK)
 			sel->r = *in;
 		else
 			sel->r = *out;
 		break;
 	case V4L2_SEL_TGT_CROP:
-		if(sel->pad == RKISP1_ISP_PAD_SINK)
+		if (sel->pad == RKISP1_ISP_PAD_SINK)
 			sel->r = *in_crop;
 		else
 			sel->r = *out_crop;
@@ -1041,7 +1039,7 @@ static int rkisp1_isp_sd_set_selection(struct v4l2_subdev *sd,
 
 	switch (sel->target) {
 	case V4L2_SEL_TGT_CROP:
-		if(sel->pad == RKISP1_ISP_PAD_SINK)
+		if (sel->pad == RKISP1_ISP_PAD_SINK)
 			*in_crop = sel->r;
 		else
 			*out_crop = sel->r;
@@ -1265,7 +1263,7 @@ void rkisp1_mipi_isr(unsigned int mis, struct rkisp1_device *dev)
 	 * is hold in this interrupt.
 	 */
 	if (mis & CIF_MIPI_ERR_CTRL(3)) {
-		//TODO: 0xf - one bit per lane?
+		/*TODO: 0xf - one bit per lane?*/
 		val = ~CIF_MIPI_ERR_CTRL(0x03);
 		writel((val) | readl(addr), (addr));
 	}
@@ -1300,7 +1298,7 @@ void rkisp1_isp_isr(unsigned int isp_mis, struct rkisp1_device *dev)
 			.type = V4L2_EVENT_FRAME_SYNC,
 			.u.frame_sync.frame_sequence = dev->stats_vdev.frame_id,
 		};
-		
+
 		do_gettimeofday(&tv);
 		rkisp1_stats_v_start(&dev->stats_vdev, &tv);
 		rkisp1_params_v_start(&dev->params_vdev);
@@ -1360,7 +1358,7 @@ void rkisp1_isp_isr(unsigned int isp_mis, struct rkisp1_device *dev)
 				 isp_mis_tmp);
 
 		/* restart MI if CIF has run out of buffers */
-		//TODO: move this(restart MI) to path_video.c?
+		/*TODO: move this(restart MI) to path_video.c?*/
 		if ((!dev->stream[RKISP1_STREAM_SP].next_buf) &&
 			(!dev->stream[RKISP1_STREAM_MP].next_buf)) {
 			u32 mi_isr = 0;

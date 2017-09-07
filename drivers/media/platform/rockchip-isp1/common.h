@@ -233,6 +233,7 @@ struct streams_regs {
 	u32 dual_crop_v_offset ;
 	u32 dual_crop_h_size ;
 	u32 dual_crop_v_size ;
+	u32 mi_y_base_ad_shd ;
 };
 
 struct rkisp1_stream_sp {
@@ -270,7 +271,7 @@ struct rkisp1_stream {
 	struct rkisp1_stream_mp mp_config;
 };
 
-extern int debug;
+extern int rkisp1_debug;
 
 static inline
 struct rkisp1_vdev_node *vdev_to_node(struct video_device *vdev)

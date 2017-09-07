@@ -48,9 +48,9 @@ struct isp_match_data {
 	int size;
 };
 
-int debug;
-module_param_named(rkisp1_debug, debug, int, S_IRUGO | S_IWUSR);
-MODULE_PARM_DESC(rkisp1_debug, "Debug level (0-1)");
+int rkisp1_debug;
+module_param_named(debug, rkisp1_debug, int, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(debug, "Debug level (0-1)");
 
 static int rkisp1_create_links(struct rkisp1_device *dev)
 {
@@ -65,7 +65,7 @@ static int rkisp1_create_links(struct rkisp1_device *dev)
 	for (i = 0; i < dev->num_sensors; i++) {
 		flags = MEDIA_LNK_FL_ENABLED;
 		source = &dev->sensors[i].sd->entity;
-		//TODO: find out the sensor source pad instead of hardcode 0
+		/*TODO: find out the sensor source pad instead of hardcode 0*/
 		sink = &dev->subdevs[RKISP1_SD_PHY_CSI]->entity;
 		ret = media_entity_create_link(source, 0, sink,
 					       MIPI_DPHY_SY_PAD_SINK, flags);
@@ -96,7 +96,7 @@ static int rkisp1_create_links(struct rkisp1_device *dev)
 				       RKISP1_ISP_PAD_SINK_PARAMS, flags);
 	if (ret < 0)
 		return ret;
-	
+
 	/* create isp internal links */
 	/* SP links */
 	source = &dev->isp_sdev.sd.entity;
@@ -153,7 +153,7 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 	sensor_sd->sd = subdev;
 	subdev->grp_id = GRP_ID_SENSOR;
 
-	v4l2_dbg(1, debug, subdev, "Async registered subdev\n");
+	v4l2_dbg(1, rkisp1_debug, subdev, "Async registered subdev\n");
 
 	return 0;
 }
@@ -288,11 +288,11 @@ static int rkisp1_register_platform_subdevs(struct rkisp1_device *dev)
 	ret = rkisp1_register_isp_subdev(dev, &dev->v4l2_dev);
 	if (ret < 0)
 		return ret;
-	
+
 	ret = rkisp1_register_stream_vdevs(dev);
 	if (ret < 0)
 		goto err_unreg_isp_subdev;
-	
+
 	ret = rkisp1_register_stats_vdev(&dev->stats_vdev, &dev->v4l2_dev, dev);
 	if (ret < 0)
 		goto err_unreg_stream_vdev;
@@ -377,11 +377,11 @@ static irqreturn_t rkisp1_irq_handler(int irq, void *cntxt)
 	mis_val = sp_stream->ops->is_frame_end_int_masked(base);
 	if (mis_val)
 		rkisp1_mi_isr(&rkisp1_dev->stream[RKISP1_STREAM_SP]);
-	
+
 	mis_val = mp_stream->ops->is_frame_end_int_masked(base);
 	if (mis_val)
 		rkisp1_mi_isr(&rkisp1_dev->stream[RKISP1_STREAM_MP]);
-	
+
 	/* TODO: update crop & resize */
 	clr_all_int(base);
 	return IRQ_NONE;
@@ -392,7 +392,7 @@ static void rkisp1_disable_sys_clk(struct rkisp1_device *rkisp1_dev)
 	struct clk *clk;
 	int i;
 
-	for (i = rkisp1_dev->clk_size- 1; i >= 0; i--) {
+	for (i = rkisp1_dev->clk_size - 1; i >= 0; i--) {
 		clk = rkisp1_dev->clks[i];
 		clk_disable_unprepare(clk);
 	}
@@ -424,6 +424,7 @@ static int rkisp1_plat_probe(struct platform_device *pdev)
 	struct v4l2_device *v4l2_dev;
 	struct rkisp1_device *isp_dev;
 	const struct isp_match_data *clk_data;
+	struct rkisp1_stream *sp_stream, *mp_stream;
 	struct resource *res;
 	int i, ret, irq;
 
@@ -461,12 +462,14 @@ static int rkisp1_plat_probe(struct platform_device *pdev)
 		isp_dev->clk_size++;
 	}
 
-	isp_dev->stream[RKISP1_STREAM_SP].id = RKISP1_STREAM_SP;
-	isp_dev->stream[RKISP1_STREAM_SP].ispdev = isp_dev;
-	isp_dev->stream[RKISP1_STREAM_MP].id = RKISP1_STREAM_MP;
-	isp_dev->stream[RKISP1_STREAM_MP].ispdev = isp_dev;
-	rkisp1_stream_init(&isp_dev->stream[RKISP1_STREAM_SP], RKISP1_STREAM_SP);
-	rkisp1_stream_init(&isp_dev->stream[RKISP1_STREAM_MP], RKISP1_STREAM_MP);
+	mp_stream = &isp_dev->stream[RKISP1_STREAM_MP];
+	sp_stream = &isp_dev->stream[RKISP1_STREAM_SP];
+	mp_stream->id = RKISP1_STREAM_SP;
+	sp_stream->id = RKISP1_STREAM_MP;
+	mp_stream->ispdev = isp_dev;
+	sp_stream->ispdev = isp_dev;
+	rkisp1_stream_init(sp_stream, RKISP1_STREAM_SP);
+	rkisp1_stream_init(mp_stream, RKISP1_STREAM_MP);
 
 	strlcpy(isp_dev->media_dev.model, "rkisp1",
 		sizeof(isp_dev->media_dev.model));
@@ -504,7 +507,7 @@ err_unreg_v4l2_dev:
 static int rkisp1_plat_remove(struct platform_device *pdev)
 {
 	struct rkisp1_device *isp_dev = platform_get_drvdata(pdev);
-	
+
 	media_device_unregister(&isp_dev->media_dev);
 	v4l2_device_unregister(&isp_dev->v4l2_dev);
 	rkisp1_unregister_params_vdev(&isp_dev->params_vdev);

@@ -53,7 +53,7 @@
  * mp sink pad fmts: yuv 422, raw
  * sp sink pad fmts: yuv422( source isp), yuv420......
  * mp source fmts: yuv, raw, no jpeg now
- * sp source fmts: yuv
+ * sp source fmts: yuv, rgb?
  *
  */
 
@@ -669,6 +669,7 @@ static struct streams_regs rkisp1_mp_streams_regs = {
 	.dual_crop_v_offset = CIF_DUAL_CROP_M_V_OFFS,
 	.dual_crop_h_size = CIF_DUAL_CROP_M_H_SIZE,
 	.dual_crop_v_size = CIF_DUAL_CROP_M_V_SIZE,
+	.mi_y_base_ad_shd = CIF_MI_MP_Y_BASE_AD_SHD,
 };
 
 static struct streams_regs rkisp1_sp_streams_regs = {
@@ -685,6 +686,7 @@ static struct streams_regs rkisp1_sp_streams_regs = {
 	.dual_crop_v_offset = CIF_DUAL_CROP_S_V_OFFS,
 	.dual_crop_h_size = CIF_DUAL_CROP_S_H_SIZE,
 	.dual_crop_v_size = CIF_DUAL_CROP_S_V_SIZE,
+	.mi_y_base_ad_shd = CIF_MI_SP_Y_BASE_AD_SHD,
 };
 
 static const
@@ -804,7 +806,7 @@ static int fmt_calc_plane_size(const struct rkisp1_fmt *fmt,
 	} else if (plane_idx == 1) {
 		bytesperline = width / fmt->xsubs;
 		image_size = height * bytesperline / fmt->ysubs;
-		if(cplanes == 2)
+		if (cplanes == 2)
 			image_size = 2 * image_size;
 	} else {
 		bytesperline = width / fmt->xsubs;
@@ -849,6 +851,7 @@ static int rkisp1_config_rsz(struct rkisp1_stream *stream,
 
 	if (get_format(stream, &input_fmt))
 		return -EINVAL;
+
 	output_fmt = stream->output;
 	input_fmt.mbus.width = stream->dcrop.width;
 	input_fmt.mbus.height = stream->dcrop.height;
@@ -882,14 +885,14 @@ static int rkisp1_config_rsz(struct rkisp1_stream *stream,
 	}
 
 	/* set RSZ input and output */
-	v4l2_dbg(1, debug, &dev->v4l2_dev,
+	v4l2_dbg(1, rkisp1_debug, &dev->v4l2_dev,
 		  "stream: %d fmt: %08x %dx%d -> fmt: %08x %dx%d\n",
 		  stream->id, input_fmt.fmt->mbus_code,
 		  input_fmt.mbus.width, input_fmt.mbus.height,
 		  output_fmt.fmt->mbus_code, output_fmt.mbus.width,
 		  output_fmt.mbus.height);
 
-	v4l2_dbg(1, debug, &dev->v4l2_dev,
+	v4l2_dbg(1, rkisp1_debug, &dev->v4l2_dev,
 		 "chroma scaling %dx%d -> %dx%d\n",
 		 in_c.w, in_c.h, out_c.w, out_c.h);
 
@@ -908,7 +911,7 @@ static int rkisp1_config_rsz(struct rkisp1_stream *stream,
 	if (async)
 		stream->ops->update_shadow_reg(base);
 
-	if (debug)
+	if (rkisp1_debug)
 		stream->ops->dump_rsz_regs(base);
 	return 0;
 }
@@ -1029,8 +1032,6 @@ static void mp_enable_mi(struct rkisp1_stream *stream)
 		mi_ctrl_mpraw_enable(base);
 	else if (cif_fmt->fmt_type == FMT_YUV)
 		mi_ctrl_mpyuv_enable(base);
-
-	return;
 }
 
 static void sp_enable_mi(struct rkisp1_stream *stream)
@@ -1038,7 +1039,6 @@ static void sp_enable_mi(struct rkisp1_stream *stream)
 	void __iomem *base = stream->base_addr;
 
 	mi_ctrl_spyuv_enable(base);
-	return;
 }
 
 static void mp_disable_mi(struct rkisp1_stream *stream)
@@ -1046,7 +1046,6 @@ static void mp_disable_mi(struct rkisp1_stream *stream)
 	void __iomem *base = stream->base_addr;
 
 	mi_ctrl_mp_disable(base);
-	return;
 }
 
 static void sp_disable_mi(struct rkisp1_stream *stream)
@@ -1054,7 +1053,6 @@ static void sp_disable_mi(struct rkisp1_stream *stream)
 	void __iomem *base = stream->base_addr;
 
 	mi_ctrl_spyuv_disable(base);
-	return;
 }
 
 static void mp_update_mi(struct rkisp1_stream *stream)
@@ -1077,8 +1075,6 @@ static void mp_update_mi(struct rkisp1_stream *stream)
 	mp_mi_set_y_offset(base, 0);
 	mp_mi_set_cb_offset(base, 0);
 	mp_mi_set_cr_offset(base, 0);
-
-	return;
 }
 
 static void sp_update_mi(struct rkisp1_stream *stream)
@@ -1101,8 +1097,6 @@ static void sp_update_mi(struct rkisp1_stream *stream)
 	sp_mi_set_y_offset(base, 0);
 	sp_mi_set_cb_offset(base, 0);
 	sp_mi_set_cr_offset(base, 0);
-
-	return;
 }
 
 static int mp_stop_mi(struct rkisp1_stream *stream)
@@ -1111,7 +1105,7 @@ static int mp_stop_mi(struct rkisp1_stream *stream)
 
 	if (stream->state != RKISP1_STATE_STREAMING)
 		return -EINVAL;
-	//mp_frame_end_int_disable(base);
+	/*mp_frame_end_int_disable(base);*/
 	stream->ops->clr_frame_end_int(base);
 	mi_ctrl_mp_disable(base);
 	return 0;
@@ -1123,7 +1117,7 @@ static int sp_stop_mi(struct rkisp1_stream *stream)
 
 	if (stream->state != RKISP1_STATE_STREAMING)
 		return -EINVAL;
-	//sp_frame_end_int_disable(base);
+	/*sp_frame_end_int_disable(base);*/
 	stream->ops->clr_frame_end_int(base);
 	mi_ctrl_spyuv_disable(base);
 	return 0;
@@ -1138,7 +1132,7 @@ static void calc_yuv_size(struct rkisp1_stream *stream)
 	u32 width = out_frm_fmt->mbus.width;
 	u32 size;
 
-	switch(num_cplanes) {
+	switch (num_cplanes) {
 	case 3:
 		fmt_calc_plane_size(out_cif_fmt, width, height, 2,
 				&size, NULL, false);
@@ -1162,7 +1156,7 @@ static int mp_calc_size(struct rkisp1_stream *stream)
 	u32 height = out_frm_fmt->mbus.height;
 	u32 bpp = out_cif_fmt->bpp;
 
-	if (out_cif_fmt->fmt_type != FMT_YUV && 
+	if (out_cif_fmt->fmt_type != FMT_YUV &&
 		out_cif_fmt->fmt_type != FMT_BAYER)
 		return -EINVAL;
 
@@ -1186,7 +1180,7 @@ static int sp_calc_size(struct rkisp1_stream *stream)
 	u32 width = out_frm_fmt->mbus.width;
 	u32 bpp = out_cif_fmt->bpp;
 
-	if (out_cif_fmt->fmt_type != FMT_YUV && 
+	if (out_cif_fmt->fmt_type != FMT_YUV &&
 		out_cif_fmt->fmt_type != FMT_RGB)
 		return -EINVAL;
 
@@ -1269,16 +1263,10 @@ static int mi_frame_end(struct rkisp1_stream *stream)
 	struct rkisp1_device *dev = stream->ispdev;
 	void __iomem *base = stream->base_addr;
 	const struct rkisp1_fmt *cif_fmt;
-	void __iomem *y_base_addr;
+	void __iomem *y_base_addr = base + stream->regs->mi_y_base_ad_shd;
 	int i = 0;
 
-	if (stream->id == RKISP1_STREAM_MP)
-		y_base_addr = base + CIF_MI_MP_Y_BASE_AD_SHD;
-	else
-		y_base_addr = base + CIF_MI_SP_Y_BASE_AD_SHD;
-
 	cif_fmt = stream->output.fmt;
-
 	if (!stream->next_buf && stream->id == RKISP1_STREAM_MP) {
 		stream->stall = dev->out_of_buffer_stall;
 	} else if (stream->next_buf &&
@@ -1516,8 +1504,8 @@ static void rkisp1_stop_streaming(struct vb2_queue *queue)
 	stream->output.mbus.height = 0;
 	/*TODO: maybe set in isp_params.c*/
 	/*
-	dev->isp_sdev.isp_dev.input_width = 0;
-	dev->isp_sdev.isp_dev.input_height = 0;
+	*dev->isp_sdev.isp_dev.input_width = 0;
+	*dev->isp_sdev.isp_dev.input_height = 0;
 	*/
 
 	spin_lock_irqsave(&stream->vbq_lock, lock_flags);
@@ -1813,7 +1801,7 @@ static int rkisp1_try_fmt_vid_cap_mplane(struct file *file, void *fh,
 
 	fmt = find_fmt(stream->fmts, stream->fmt_size,
 				f->fmt.pix_mp.pixelformat);
-	if(!fmt)
+	if (!fmt)
 		fmt = stream->fmts;
 
 	/* TODO: do more checks on resolution */
@@ -1900,8 +1888,8 @@ static int rkisp1_g_fmt_vid_cap_mplane(struct file *file, void *fh,
 	for (i = 0; i < f->fmt.pix_mp.num_planes; i++) {
 		plane_fmt = &f->fmt.pix_mp.plane_fmt[i];
 		fmt_calc_plane_size(strm_fmt->fmt, f->fmt.pix_mp.width,
-				    f->fmt.pix_mp.height, i, &plane_fmt->sizeimage,
-				    &plane_fmt->bytesperline, true);
+			f->fmt.pix_mp.height, i, &plane_fmt->sizeimage,
+			&plane_fmt->bytesperline, true);
 	}
 
 	return 0;
@@ -1955,8 +1943,9 @@ static int rkisp1_s_selection(struct file *file, void *prv,
 
 	/* check whether input fmt is raw */
 	if (stream->id == RKISP1_STREAM_MP &&
-	    (input_fmt.fmt->fmt_type == FMT_BAYER))
+	    (input_fmt.fmt->fmt_type == FMT_BAYER)) {
 		return -EINVAL;
+	}
 
 	if (sel->target == V4L2_SEL_TGT_CROP) {
 		/* crop */
